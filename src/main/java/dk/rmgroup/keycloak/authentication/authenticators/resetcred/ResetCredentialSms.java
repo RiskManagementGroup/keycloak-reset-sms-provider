@@ -1,38 +1,50 @@
 package dk.rmgroup.keycloak.authentication.authenticators.resetcred;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.stream.Collectors;
+
+import org.jboss.logging.Logger;
 import org.keycloak.Config;
-import org.keycloak.authentication.*;
+import org.keycloak.authentication.AuthenticationFlowContext;
+import org.keycloak.authentication.AuthenticationFlowError;
+import org.keycloak.authentication.Authenticator;
+import org.keycloak.authentication.AuthenticatorFactory;
 import org.keycloak.authentication.actiontoken.resetcred.ResetCredentialsActionToken;
 import org.keycloak.authentication.authenticators.browser.AbstractUsernameFormAuthenticator;
 import org.keycloak.common.util.Time;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
-import org.keycloak.models.*;
+import org.keycloak.models.AuthenticationExecutionModel;
+import org.keycloak.models.AuthenticatorConfigModel;
+import org.keycloak.models.DefaultActionTokenKey;
+import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.KeycloakSessionFactory;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.FormMessage;
 import org.keycloak.provider.ProviderConfigProperty;
 import org.keycloak.sessions.AuthenticationSessionCompoundId;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.theme.Theme;
 
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.text.MessageFormat;
-import java.util.*;
+import dk.rmgroup.keycloak.KeycloakSmsConstants;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
-import java.util.stream.Collectors;
-
-import dk.rmgroup.keycloak.KeycloakSmsConstants;
-
-import org.jboss.logging.Logger;
 
 public class ResetCredentialSms implements Authenticator, AuthenticatorFactory {
   private static final Logger logger = Logger.getLogger(ResetCredentialSms.class);
@@ -108,24 +120,23 @@ public class ResetCredentialSms implements Authenticator, AuthenticatorFactory {
       connection.setRequestProperty("Content-Type", "application/json");
       connection.setRequestProperty("Accept", "application/json");
       connection.setDoOutput(true);
-      OutputStream os = connection.getOutputStream();
-      OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8");
+      try (OutputStream os = connection.getOutputStream();
+          OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8")) {
 
-      String inputText = "{\"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_FROM) + "\": \""
-          + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FROM) + "\", \""
-          + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_TO)
-          + "\": \"" + mobileNumber + "\", \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_TEXT)
-          + "\": \""
-          + smsTextMessage.replace("\n", "\\n")
-          + "\", \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_API_KEY)
-          + "\": \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_KEY) + "\", \""
-          + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_API_SECRET) + "\": \""
-          + getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_SECRET) + "\"}";
+        String inputText = "{\"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_FROM) + "\": \""
+            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FROM) + "\", \""
+            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_TO)
+            + "\": \"" + mobileNumber + "\", \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_TEXT)
+            + "\": \""
+            + smsTextMessage.replace("\n", "\\n")
+            + "\", \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_API_KEY)
+            + "\": \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_KEY) + "\", \""
+            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_API_SECRET) + "\": \""
+            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_SECRET) + "\"}";
 
-      osw.write(inputText);
-      osw.flush();
-      osw.close();
-      os.close();
+        osw.write(inputText);
+        osw.flush();
+      }
       connection.connect();
 
       String responseString;
@@ -241,7 +252,7 @@ public class ResetCredentialSms implements Authenticator, AuthenticatorFactory {
     return configProperties;
   }
 
-  private static final List<ProviderConfigProperty> configProperties = new ArrayList<ProviderConfigProperty>();
+  private static final List<ProviderConfigProperty> configProperties = new ArrayList<>();
 
   static {
     ProviderConfigProperty property;
