@@ -1,6 +1,7 @@
 package dk.rmgroup.keycloak.authentication.authenticators.resetcred;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -177,7 +178,7 @@ public class ResetCredentialSms implements Authenticator, AuthenticatorFactory {
             .createErrorPage(Response.Status.INTERNAL_SERVER_ERROR);
         context.failure(AuthenticationFlowError.INTERNAL_ERROR, challenge);
       }
-    } catch (Exception e) {
+    } catch (IOException e) {
       event.clone().event(EventType.SEND_RESET_PASSWORD)
           .detail(Details.USERNAME, username)
           .detail(KeycloakSmsConstants.ATTR_MOBILE, mobileNumber)
