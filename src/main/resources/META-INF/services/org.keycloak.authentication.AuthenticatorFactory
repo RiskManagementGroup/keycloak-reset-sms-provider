@@ -1,1 +1,2 @@
 dk.rmgroup.keycloak.authentication.authenticators.resetcred.ResetCredentialSms
+dk.rmgroup.keycloak.authentication.authenticators.resetcred.ResetCredentialSmsOTP
