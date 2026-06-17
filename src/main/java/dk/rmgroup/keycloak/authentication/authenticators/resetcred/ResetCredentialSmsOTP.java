@@ -51,7 +51,7 @@ public class ResetCredentialSmsOTP implements Authenticator, AuthenticatorFactor
 
   public static final String PROVIDER_ID = "reset-credential-sms-otp";
 
-  public static SecureRandom secureRandom = new SecureRandom();
+  public static final SecureRandom secureRandom = new SecureRandom();
 
   @Override
   public void authenticate(AuthenticationFlowContext context) {
@@ -82,7 +82,7 @@ public class ResetCredentialSmsOTP implements Authenticator, AuthenticatorFactor
     EventBuilder event = context.getEvent();
     // we don't want people guessing usernames, so if there is a problem, just
     // continuously challenge
-    if (mobileNumber == null || mobileNumber.trim().length() == 0) {
+    if (mobileNumber == null || mobileNumber.trim().isEmpty()) {
       event.user(user)
           .detail(Details.USERNAME, username)
           .error(KeycloakSmsConstants.INVALID_MOBILE);
