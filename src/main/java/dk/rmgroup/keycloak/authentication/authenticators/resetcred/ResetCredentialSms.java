@@ -81,7 +81,7 @@ public class ResetCredentialSms implements Authenticator, AuthenticatorFactory {
     EventBuilder event = context.getEvent();
     // we don't want people guessing usernames, so if there is a problem, just
     // continuously challenge
-    if (mobileNumber == null || mobileNumber.trim().length() == 0) {
+    if (mobileNumber == null || mobileNumber.trim().isEmpty()) {
       event.user(user)
           .detail(Details.USERNAME, username)
           .error(KeycloakSmsConstants.INVALID_MOBILE);
