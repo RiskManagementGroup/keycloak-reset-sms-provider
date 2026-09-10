@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -466,26 +467,23 @@ public class ResetCredentialSmsOTP implements Authenticator, AuthenticatorFactor
 
       AuthenticationSessionModel authenticationSession = context.getAuthenticationSession();
 
-      URL url = URI.create(getConfigString(config, KeycloakSmsConstants.CONF_SMS_URL)).toURL();
+      URL url = URI.create("https://api-eu.nexmo.com/v1/messages").toURL();
 
       HttpURLConnection connection = (HttpURLConnection) url.openConnection();
       connection.setRequestMethod("POST");
       connection.setRequestProperty("Content-Type", "application/json");
       connection.setRequestProperty("Accept", "application/json");
+      String base64EncodedApiKey = Base64.getEncoder()
+          .encodeToString((getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_KEY) + ":"
+              + getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_SECRET)).getBytes(StandardCharsets.UTF_8));
+      connection.setRequestProperty("Authorization", "Basic " + base64EncodedApiKey);
       connection.setDoOutput(true);
       try (OutputStream os = connection.getOutputStream();
-          OutputStreamWriter osw = new OutputStreamWriter(os, "UTF-8")) {
+          OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
 
-        String inputText = "{\"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_FROM) + "\": \""
-            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FROM) + "\", \""
-            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_TO)
-            + "\": \"" + mobileNumber + "\", \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_TEXT)
-            + "\": \""
-            + smsTextMessage.replace("\n", "\\n")
-            + "\", \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_API_KEY)
-            + "\": \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_KEY) + "\", \""
-            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FIELD_API_SECRET) + "\": \""
-            + getConfigString(config, KeycloakSmsConstants.CONF_SMS_API_SECRET) + "\"}";
+        String inputText = "{\"from\": \"" + getConfigString(config, KeycloakSmsConstants.CONF_SMS_FROM)
+            + "\", \"to\": \"" + mobileNumber + "\", \"text\": \"" + smsTextMessage.replace("\n", "\\n")
+            + "\", \"message_type\": \"text\", \"channel\": \"sms\"}";
 
         osw.write(inputText);
         osw.flush();
@@ -506,7 +504,7 @@ public class ResetCredentialSmsOTP implements Authenticator, AuthenticatorFactor
 
       int statusCode = connection.getResponseCode();
 
-      if (statusCode == 200) {
+      if (statusCode == 202) {
         event.clone().event(EventType.SEND_RESET_PASSWORD)
             .user(user)
             .detail(Details.USERNAME, username)
